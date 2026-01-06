@@ -8,16 +8,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get code
+        # Check out the repository so we can run tests and build
         uses: actions/checkout@v3
+
       - name: Install dependencies
+        # Install all project dependencies using a clean install
         run: npm ci
+
       - name: Lint code
+        # Run the linter to check code formatting and style issues
         run: npm run lint
+
       - name: Test code
+        # Run the test suite to verify that the code works correctly
         run: npm run test
+
   build:
     needs: test
     runs-on: ubuntu-latest
+
+    outputs:
+      # Specify a job-level output that other jobs can access
+      # This is NOT the same as an artifact; this is a "metadata" output
+      # It references the output of a step (here the step with id "publish")
+      script-file: ${{steps.publish.outputs.js-file }}
+
     steps:
       - name: Get code
         uses: actions/checkout@v3
@@ -25,16 +40,52 @@ jobs:
         run: npm ci
       - name: Build website
         run: npm run build
-      - name: Upload artifcats # Creating Artifacts
+
+        # Create build artifacts (files or folders) using GitHub Actions
+        # These artifacts can be used in other jobs later
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-files
-          path: | # specify which files to store
-            dist
-            package.json
+          path: dist
+          # Use the same name in the deploy job to download these files
+          # We can specify multiple paths using the pipe symbol:
+          # path: |
+          #   dist
+          #   package.json
+
+      - name: Publish JS filename
+        id: publish
+        # The `id` gives this step a reference name, so other steps or job outputs can access its outputs
+        # Here we find the JS file in dist/assets and write it as a step output
+        run: find dist/assets/*.js -type f -execdir echo 'js-file={}' >> $GITHUB_OUTPUT ';'
+        # $GITHUB_OUTPUT is a special file that allows a step to define outputs
+        # Each line should be of the form name=value
+        # In this case, "js-file" will be available as steps.publish.outputs.js-file
+
   deploy:
-    needs: build
+    needs: build # This job waits for the "build" job to finish
     runs-on: ubuntu-latest
     steps:
+      - name: Get build artifacts
+        # Download artifacts created in the build job
+        # Use the same name as given when uploading artifacts ("dist-files")
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-files
+
+        # All files inside /dist are now available in the runner
+        # Note: the files are extracted into the runner's working folder, not inside a /dist folder (no longer /dist folder)
+
+      - name: Output contents
+        # List the files to verify that the artifacts were downloaded correctly
+        run: ls
+
+      - name: Output filename
+        # Access the output from the build job
+        # `needs.build.outputs.script-file` references the job-level output we defined earlier
+        # This allows passing data (like a filename) from one job to another
+        run: echo "${{ needs.build.outputs.script-file }}"
+
       - name: Deploy
         run: echo "Deploying..."
