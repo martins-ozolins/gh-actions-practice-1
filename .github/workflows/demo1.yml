@@ -1,8 +1,19 @@
 name: Events Demo 1
 
 on:
+  # action types on specific pull request events
   pull_request:
     types: [opened, edited]
+    branches:
+      - main
+
+  # filters on push events
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - ".github/workflows/*"
+
   workflow_dispatch:
 
 jobs:
