@@ -1,6 +1,11 @@
 name: Deployment Workflow
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - .github/workflows/*
 
 jobs:
   lint-and-test:
