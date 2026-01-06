@@ -11,8 +11,24 @@ jobs:
         # Check out the repository so we can run tests and build
         uses: actions/checkout@v3
 
+      # Cache node_modules
+      - name: Cache dependencies
+        uses: actions/cache@v4 # Use GitHub Action to cache folders and files
+        with:
+          path: ~/.npm # The folder we want to cache (npm stores downloaded packages here)
+
+          # Cache is keyed by a hash - each cache we create is stored with a unique key
+          # In this case, our key is based on the contents of package-lock.json
+          # hashFiles(file) => a function that reads the contents of the specified file(s) and creates a hash of those contents.
+          # Once the file changes (e.g., new dependencies added), the hash changes → a new cache is created.
+          key: deps-node-modules-${{hashFiles('**/package-lock.json')}}
+
       - name: Install dependencies
-        # Install all project dependencies using a clean install
+        # Even after restoring the cache, we still run `npm ci`:
+        # 1. The cache (~/.npm) only stores the downloaded package files, not node_modules.
+        # 2. `npm ci` installs dependencies into node_modules for this workflow.
+        # 3. Ensures exact versions from package-lock.json and rebuilds any native packages.
+        # The cache just speeds up installs by avoiding network downloads.
         run: npm ci
 
       - name: Lint code
@@ -36,8 +52,27 @@ jobs:
     steps:
       - name: Get code
         uses: actions/checkout@v3
+
+      # Cache node_modules
+      - name: Cache dependencies
+        uses: actions/cache@v4 # Use GitHub Action to cache folders and files
+        with:
+          path: ~/.npm # The folder we want to cache (npm stores downloaded packages here)
+
+          # Cache is keyed by a hash - each cache we create is stored with a unique key
+          # In this case, our key is based on the contents of package-lock.json
+          # hashFiles(file) => a function that reads the contents of the specified file(s) and creates a hash of those contents.
+          # Once the file changes (e.g., new dependencies added), the hash changes → a new cache is created.
+          key: deps-node-modules-${{hashFiles('**/package-lock.json')}}
+
       - name: Install dependencies
+        # Even after restoring the cache, we still run `npm ci`:
+        # 1. The cache (~/.npm) only stores the downloaded package files, not node_modules.
+        # 2. `npm ci` installs dependencies into node_modules for this workflow.
+        # 3. Ensures exact versions from package-lock.json and rebuilds any native packages.
+        # The cache just speeds up installs by avoiding network downloads.
         run: npm ci
+
       - name: Build website
         run: npm run build
 
